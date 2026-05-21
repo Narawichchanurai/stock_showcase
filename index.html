@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stock Research Briefs</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+      background: #f4f4f4;
+      color: #1a1a1a;
+      line-height: 1.6;
+    }
+
+    .site-header {
+      background: #fff;
+      border-bottom: 1px solid #e2e2e2;
+      padding: 20px 24px;
+      text-align: center;
+    }
+    .site-header h1 { font-size: 1.4rem; font-weight: 700; color: #111; }
+    .site-header p { color: #888; font-size: 0.82rem; margin-top: 4px; }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 28px 20px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+      gap: 14px;
+    }
+
+    .card {
+      background: #fff;
+      border: 1px solid #e2e2e2;
+      border-radius: 8px;
+      padding: 18px 20px;
+      cursor: pointer;
+      transition: box-shadow 0.15s ease, border-color 0.15s ease;
+    }
+    .card:hover {
+      box-shadow: 0 4px 14px rgba(0,0,0,0.09);
+      border-color: #c8c8c8;
+    }
+
+    .card-header { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
+
+    .badge {
+      display: inline-block;
+      background: #111;
+      color: #fff;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      padding: 2px 7px;
+      border-radius: 4px;
+    }
+    .badge-ver {
+      background: #6b7280;
+      font-size: 0.65rem;
+      font-weight: 600;
+    }
+    .badge-fund  { background: #7c3aed; }
+    .badge-energy { background: #b45309; }
+    .badge-ai    { background: #15803d; }
+
+    .card-company { font-size: 0.9rem; font-weight: 600; color: #111; margin-bottom: 3px; }
+    .card-date { font-size: 0.72rem; color: #aaa; margin-bottom: 10px; }
+    .card-preview {
+      font-size: 0.82rem;
+      color: #555;
+      line-height: 1.55;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    /* Overlay + Modal */
+    .overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      z-index: 200;
+      overflow-y: auto;
+      padding: 48px 20px;
+    }
+    .overlay.active { display: block; }
+
+    .modal {
+      background: #fff;
+      max-width: 800px;
+      margin: 0 auto;
+      border-radius: 10px;
+      padding: 44px 48px;
+      position: relative;
+    }
+    @media (max-width: 600px) {
+      .modal { padding: 28px 18px; }
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 14px;
+      right: 16px;
+      background: none;
+      border: none;
+      font-size: 1.2rem;
+      cursor: pointer;
+      color: #888;
+      padding: 4px 8px;
+      border-radius: 4px;
+      line-height: 1;
+    }
+    .modal-close:hover { background: #f0f0f0; color: #333; }
+
+    /* Brief content styles */
+    .brief h1 { font-size: 1.35rem; font-weight: 700; margin-bottom: 4px; line-height: 1.3; }
+    .brief h2 {
+      font-size: 1rem; font-weight: 700;
+      margin-top: 28px; margin-bottom: 10px;
+      padding-bottom: 5px; border-bottom: 1px solid #efefef; color: #222;
+    }
+    .brief h3 { font-size: 0.95rem; font-weight: 600; margin-top: 16px; margin-bottom: 6px; color: #444; }
+    .brief p { font-size: 0.88rem; color: #333; margin-bottom: 10px; line-height: 1.65; }
+    .brief ul { padding-left: 18px; margin-bottom: 12px; }
+    .brief li { font-size: 0.88rem; color: #333; margin-bottom: 7px; line-height: 1.6; }
+    .brief hr { border: none; border-top: 1px solid #eee; margin: 18px 0; }
+    .brief em { font-style: italic; color: #666; }
+    .brief strong { font-weight: 600; color: #111; }
+    .brief code {
+      background: #f5f5f5; border: 1px solid #e8e8e8;
+      padding: 1px 5px; border-radius: 3px;
+      font-size: 0.82em; font-family: 'SFMono-Regular', Consolas, monospace;
+    }
+    .brief blockquote {
+      border-left: 3px solid #ddd; margin: 12px 0;
+      padding: 8px 14px; background: #fafafa;
+      border-radius: 0 5px 5px 0;
+    }
+    .brief blockquote p { color: #666; margin-bottom: 4px; font-size: 0.85rem; }
+    .brief a { color: #2563eb; text-decoration: none; }
+    .brief a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+<header class="site-header">
+  <h1>Stock Research Briefs</h1>
+  <p>7 briefs &middot; คลิก card เพื่อดู brief เต็ม</p>
+</header>
+
+<div class="container">
+  <div class="grid" id="grid"></div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="modal" role="dialog" aria-modal="true">
+    <button class="modal-close" id="closeBtn" aria-label="Close">&#x2715;</button>
+    <div class="brief" id="briefContent"></div>
+  </div>
+</div>
+
+<!-- ============================================================
+     Embedded markdown sources — one <script type="text/plain">
+     per brief. No HTML parsing happens inside these tags.
+     ============================================================ -->
+
+<script type="text/plain" id="md-0">
+# AAPL — Apple Inc. Research Brief
+_Generated: 2026-05-21_
+
+---
+
+## 1. Company Snapshot
+
+Apple ออกแบบและขายสินค้าอิเล็กทรอนิกส์ (iPhone, Mac, iPad, Apple Watch, AirPods) และบริการดิจิทัล (App Store, iCloud, Apple Music, Apple TV+, Apple Pay) รายได้หลักยังมาจาก iPhone ประมาณ 46-48% ของยอดขายรวม แต่ฝั่ง Services กำลังโตเร็วที่สุดและมี margin สูงกว่ามาก บริษัทขายผ่านทั้งช่องทางตรง (Apple Store, Online) และ carrier + reseller ทั่วโลก ตลาดหลักคือ Americas ยุโรป และ Greater China โดย China คิดเป็น ~17-19% ของรายได้รวมและเป็นทั้ง upside และ risk ที่ต้องจับตา
+
+_(source: sources/AAPL/10-k-fy2025.md — placeholder excerpt, ตัวเลขรอยืนยันจาก 10-K จริง)_
+
+---
+
+## 2. Fundamentals Signal
+
+- **Revenue scale:** Total net sales ~$391B ใน FY2025 — iPhone ยังใหญ่สุด (~46-48%) แต่ Services คือตัวที่โตเร็วและ margin ดีที่สุด (~74-76% gross margin vs Products ~37-39%) (source: 10-k-fy2025.md, Item 7)
+- **Margin mix shift:** Blended gross margin แถว 46-47% และมีแนวโน้มขยายตาม Services mix ที่เพิ่ม แต่ memory cost headwind กำลังสวนทางในระยะสั้น (source: 10-k-fy2025.md, Item 7)
+- **Capital allocation:** Buyback หนักที่สุดใน S&P 500 + dividend โต + ยกเลิก net cash neutral target อย่างเป็นทางการใน Q2 FY2026 — financial policy กำลังเปลี่ยน
+- **R&D acceleration:** R&D scaling ขึ้น "significantly" YoY ในฝั่ง AI และ silicon — Process Power ที่กำลัง build ผ่าน Apple Intelligence และ in-house SoC
+- **Key risks:** TSMC dependency สำหรับ advanced SoC + China revenue concentration ~17-19% + App Store regulatory pressure ใน EU/US ทั้งสามตัวนี้เป็น structural risk ที่ไม่หายในระยะสั้น
+
+⚠️ _10-K source เป็น placeholder excerpt — ตัวเลขข้างต้นรอยืนยันจาก 10-K จริง_
+
+---
+
+## 3. Latest Earnings — Q2 FY2026 (March Quarter)
+
+- **Revenue $111.2B (+17% YoY) ทำ March record** แม้มี supply constraints: iPhone $57B (+22%), Services $31B (+16%), Mac $8.4B (+6%), iPad $6.9B (+8%), Wearables $7.9B (+5%)
+- **Diluted EPS $2.10 (+22% YoY) ทำ March record** — Net income $29.6B; Operating cash flow $28.7B
+- **Gross margin 49.3%** เหนือ guidance range — Services 76.7%, Products 38.7%
+- **Guidance Q3 FY2026:** Revenue growth 14-17% YoY; Gross margin 47.5-48.5% — ลดจาก 49.3% เพราะ memory costs "significantly higher"; supply crunch ใน MacBook Neo + Mac mini + Mac Studio คือ constraint หลัก
+- **CEO transition:** Tim Cook ส่งไม้ให้ John Ternus มีผล 1 ก.ย. 2026; Cook ย้ายเป็น Executive Chairman; Greater China H1 FY2026 +33% YoY ทำ quarterly record
+
+---
+
+## 4. Bull Case / Bear Case
+
+**Bull:**
+- Services margin 74-76% โตต่อเนื่อง — ยิ่ง mix shift ไป Services ยิ่ง blended margin ขยาย earnings quality ดีขึ้นโดยไม่ต้องพึ่ง iPhone unit growth เพียงอย่างเดียว
+- Apple Intelligence + in-house SoC คือ Switching Cost และ Process Power ที่ทำ ecosystem lock-in แข็งขึ้น — customer satisfaction iPhone 99% ใน US เป็นสัญญาณว่ายังไม่มีใครทำลาย retention ได้
+- Greater China bounce กลับ +33% YoY ใน H1 FY2026 หลังจากที่เป็นจุดอ่อนมาหลายปี — ถ้า trend นี้ hold ได้เป็น upside ที่ยังไม่ reflect เต็มที่
+
+**Bear:**
+- Memory cost headwind "significantly higher" ใน June quarter และยังเพิ่มต่อ — management ยังไม่ระบุว่าจะ pass through ให้ลูกค้าได้แค่ไหน กดดัน gross margin โดยตรงในระยะสั้น
+- CEO transition กลางปีเป็น execution risk — Ternus มาจากฝั่ง hardware engineering ไม่ใช่ operations/finance แบบ Cook; capital allocation discipline ใน 1-2 quarter แรกยังเป็นคำถาม
+- App Store forced business model changes ใน EU + US ถ้า materialise กระทบ Services segment ที่ margin ดีที่สุดและ thesis พึ่งพาอยู่
+
+⚠️ _ไม่มีข้อมูล news real-time — analyst moves และ catalyst dates ล่าสุดต้องตรวจแยกต่างหาก_
+
+---
+
+## 5. Kill Conditions
+
+- **Services gross margin ร่วงต่ำกว่า 72% สองไตรมาสติดกัน** — สัญญาณ regulatory หรือ competitive pressure เริ่ม eat into engine หลักของ thesis จริงๆ ไม่ใช่แค่ noise
+- **Greater China revenue กลับมาติดลบ YoY อีกครั้ง** หลังที่เพิ่งกลับมา +33% — แปลว่า local competition (Huawei/Xiaomi) กินส่วนแบ่งถาวรและ Apple Intelligence ไม่ได้ช่วยในตลาดนั้น
+- **Ternus reverse หรือ pause buyback ใน 2 quarter แรกหลังรับตำแหน่ง** — สัญญาณที่ชัดที่สุดว่า capital allocation discipline เปลี่ยนทิศจาก Cook era
+
+---
+
+## 6. What to Ask Before Owning It
+
+1. ก่อนตลาดเปิด AAPL มีประวัติ price action แบบไหนหลัง earnings beat — มันมักพุ่งแล้วย่อกลับภายใน pre-market หรือ hold ขึ้นไปต่อหลัง open?
+2. Memory cost headwind ที่ management บอก "significantly higher" จะ peak ไตรมาสไหน — มีสัญญาณ (TSMC pricing, DRAM spot price) อะไรที่บอกได้ว่า worst case ผ่านไปแล้ว?
+3. CEO transition 1 ก.ย. 2026 — window ไหนก่อน/หลัง transition date ที่ price action มักผันผวน และ institutional money มักขยับตอนไหน?
+4. Services growth 16% YoY มาจาก volume หรือ ARPU — ถ้ามาจาก price hike เพียงอย่างเดียวมันยั่งยืนแค่ไหนถ้า recession มา?
+5. WWDC และ product launch cycle ช่วงไหนในปีนี้ที่มีโอกาสทำ pre-market spike สั้นๆ ที่คุ้มกับ risk/reward ของสไตล์ entry ก่อน open?
+</script>
+
+<script type="text/plain" id="md-1">
+# NVDA — NVIDIA Corporation
+**วันที่:** 2026-05-21
+
+---
+
+## 1. Company Snapshot
+
+NVIDIA ออกแบบชิป GPU ที่กลายเป็นโครงสร้างพื้นฐานหลักของอุตสาหกรรม AI ทั่วโลก รายได้ส่วนใหญ่มาจากกลุ่ม Data Center ที่ขาย GPU ซีรีส์ H100/H200/Blackwell ให้บริษัทคลาวด์ยักษ์ใหญ่อย่าง Microsoft, Google, Amazon และ Meta รวมถึงประเทศต่างๆ ที่ลงทุน AI infrastructure ธุรกิจ Gaming ยังทำรายได้แต่สัดส่วนหดลงเรื่อยๆ เมื่อเทียบกับ Data Center ที่ขึ้นมาครองพอร์ต บริษัทเป็นโมเดล fabless — ออกแบบชิปเองแต่ให้ TSMC เป็นผู้ผลิต
+
+---
+
+## 2. Fundamentals Signal
+
+- **รายได้: ทิศทางขึ้นแรงมาก** — Data Center โตแบบก้าวกระโดดในช่วง FY2024-2025 ขับเคลื่อนโดย demand GPU สำหรับ AI training และ inference ที่ยังไม่มีสัญญาณชะลอ (ตรวจสอบใน 10-K ล่าสุด)
+- **Gross margin: ทรงตัวสูง** — สะท้อน pricing power และ product mix ที่หนักไปทาง Data Center; สูงผิดปกติสำหรับบริษัทฮาร์ดแวร์ (ตรวจสอบใน 10-K ล่าสุด)
+- **งบดุล: แข็งแกร่ง** — เงินสดสูง หนี้อยู่ในระดับที่บริหารได้ สามารถ self-fund R&D ขนาดใหญ่ได้เองโดยไม่พึ่งหนี้
+- **Capital allocation: buyback + R&D เข้ม** — คืนเงินผู้ถือหุ้นผ่าน share repurchase ต่อเนื่อง พร้อมลงทุน R&D หนักเพื่อรักษา Switching Costs ผ่าน CUDA ecosystem ที่ developer ทั่วโลกติดอยู่
+- **ความเสี่ยงหลักฝั่ง fundamentals** — รายได้กระจุกใน Data Center; ถ้า hyperscaler capex ชะลอหรือกฎส่งออกชิปไปจีนเปลี่ยน จะกระทบโดยตรงและเร็ว
+
+---
+
+## 3. Latest Earnings
+
+ไม่มี earnings transcript ใน sources/NVDA/ — ข้าม section นี้ได้เลย หรือ user ใส่ source ก่อนแล้วรัน brief ใหม่
+
+วิธีเพิ่ม: สร้าง folder sources/NVDA/ แล้วใส่ไฟล์ชื่อ pattern q*-YYYY-call.md เช่น q1-2026-call.md
+
+---
+
+## 4. Bull Case / Bear Case
+
+**Bull**
+- NVIDIA มี Process Power จาก CUDA ecosystem ที่ developer และ researcher ทั่วโลกติดลึก — migration ออกมีต้นทุนสูงมาก ทำให้รายได้มีแรงยึด แม้คู่แข่งจะไล่ตาม architecture
+- ทุก AI hyperscaler ยังอยู่ในช่วง capex expansion โดยเฉพาะ inference workload ที่เพิ่มตามการใช้งาน AI ใน production — demand cycle น่าจะยาวกว่า 1-2 ไตรมาส
+- NVDA มีประวัติ pre-market volatility สูงในวัน earnings และวันที่มี catalyst ใหญ่ — เหมาะกับการจับรอบสั้นถ้าจับจังหวะ catalyst และ entry point ได้ถูก
+
+**Bear**
+- AMD ไล่ตาม GPU architecture ขณะที่ Google (TPU), Amazon (Trainium), Meta (MTIA) ออกแบบชิป AI เองมากขึ้น — Switching Costs จาก CUDA อาจถูก erode ได้ถ้า hyperscaler ลงทุนพัฒนา ecosystem ของตัวเองต่อเนื่อง
+- รายได้กระจุกใน Data Center มากเกินไป ถ้า capex cycle ของ hyperscaler หักหัวหรือ AI adoption ชะลอกว่าที่คาด กำไรจะหดหนักในไตรมาสเดียว
+- ราคาหุ้น premium สูง — earnings miss เล็กน้อยหรือ guidance ต่ำกว่าคาดมักทำให้หุ้นดิ่งแรงก่อนตลาดเปิด ซึ่งถ้า position ผิดฝั่งโดนเต็มๆ
+
+---
+
+## 5. Kill Conditions
+
+- **Guidance Data Center ลด QoQ สองไตรมาสติด** — สัญญาณแรกที่บอกว่า demand cycle AI หักหัวจริง ไม่ใช่แค่ seasonal variation; ออกทันที ไม่รอยืนยันไตรมาสที่สาม
+- **Gross margin ลดลงต่อเนื่อง 3 ไตรมาส** — ถ้า margin กัดลงแสดงว่า pricing power เริ่มหาย หรือ competition เริ่มกิน share จริง ไม่ใช่แค่ product mix shift
+- **Hyperscaler top-3 ลด GPU order อย่างชัดเจน** — signal นี้มักออกก่อนตัวเลขทางการผ่าน supply chain news หรือ capex guidance ในงาน earnings ของ Microsoft/Google/Amazon ถ้าเห็น ให้ตัดก่อน official confirmation
+
+---
+
+## 6. What to Ask Before Owning It
+
+1. **Catalyst ที่จะทำให้ pre-market พุ่งคืออะไร และอยู่ห่างกี่วัน?** — earnings date, product launch, หรือ hyperscaler capex announcement ที่กำลังจะออก?
+2. **ราคาปัจจุบันอยู่ตรงไหนเทียบกับ 52-week range และ recent support zone?** — NVDA dip และ spike รุนแรง รู้ว่า entry จุดไหนสมเหตุสมผลก่อนเข้า
+3. **มี unusual options activity หรือ dark pool flow ก่อน event ไหม?** — สัญญาณ institutional positioning ที่อาจชี้ทิศทาง pre-market ได้ล่วงหน้า
+4. **Export control ชิปไปจีนล่าสุดสถานะเป็นยังไง?** — กฎเปลี่ยนทีไร NVDA มักเด้งหรือดิ่งทันทีในช่วง pre-market ก่อนที่ retails จะตามทัน
+5. **ไตรมาสที่แล้ว หุ้น react ยังไงในคืน earnings — gap up หรือ gap down และกลับมาที่เดิมเร็วแค่ไหน?** — ดู pattern ก่อนวางแผน entry/exit สำหรับรอบถัดไป
+</script>
+
+<script type="text/plain" id="md-2">
+# DXYZ — Destiny Tech100 Inc.
+_Research summary only. Not investment advice._
+
+---
+
+## What the company does
+
+Destiny Tech100 Inc. เป็น closed-end fund ที่จดทะเบียนซื้อขายในตลาดหลักทรัพย์ NYSE (IPO มีนาคม 2024) โดยให้นักลงทุนทั่วไปเข้าถึงหุ้นใน private tech unicorns ที่ยังไม่ IPO อย่าง SpaceX, OpenAI, Stripe, Chime และ Discord กองทุนนี้ถือครองสถานะในบริษัทเหล่านี้โดยตรง ทำให้ผู้ซื้อ DXYZ ได้ exposure กับ "pre-IPO tech giants" ผ่านตลาดสาธารณะ ซึ่งปกติเข้าถึงได้เฉพาะ VC และ institutional investor เท่านั้น
+
+---
+
+## Latest Earnings
+
+> ⚠️ DXYZ เป็น closed-end fund ไม่มี earnings แบบบริษัทปกติ — ข้อมูลด้านล่างอ้างอิงจาก NAV/portfolio disclosure (training data cutoff สิงหาคม 2025) ยังไม่ได้ดึงจาก filing จริง
+
+- **NAV vs. Market Price:** DXYZ ซื้อขายที่ premium สูงมากเหนือ NAV จริง (บางช่วงทะลุ 100–200%+) ซึ่งหมายความว่าตลาดให้ราคาสูงกว่ามูลค่าทรัพย์สินในพอร์ตจริงๆ มาก
+- **Top holdings** ได้แก่ SpaceX (สัดส่วนใหญ่สุด), OpenAI, Stripe, Chime, Discord — ล้วนเป็น unicorns ที่มูลค่า private market สูง
+- **AUM** ของกองทุนค่อนข้างเล็กเมื่อเทียบกับ premium ที่ตลาดให้ — ทำให้ราคาหุ้นผันผวนสูงมาก
+- **ยังไม่มี earnings ในแบบ EPS** เพราะ fund ไม่ได้ดำเนินธุรกิจ แต่รายงาน NAV per share เป็นหลัก
+- กองทุนเพิ่งจดทะเบียนปี 2024 ข้อมูล track record ยังสั้น — ควรอ่าน prospectus โดยตรง
+
+---
+
+## Bull Case / Bear Case
+
+### Bull Case
+- **Access to unicorns:** เป็นวิธีเดียวที่นักลงทุนรายย่อยจะถือ SpaceX หรือ OpenAI ผ่านบัญชีซื้อขายปกติ — demand นี้เป็น structural
+- **Potential IPO catalyst:** ถ้า SpaceX หรือ Stripe IPO มูลค่า NAV จะ re-rate ขึ้นมหาศาล ซึ่งอาจดัน share price ตาม
+- **AI/Space tailwind:** portfolio concentrated ใน sectors ที่ตลาดให้ valuation พรีเมียมสูงในยุคนี้
+
+### Bear Case
+- **Premium risk คือความเสี่ยงหลัก:** ถ้า premium หด (เช่น จาก 200% ลงมา 50%) ราคาหุ้นร่วงหนักแม้ NAV ไม่เปลี่ยน — นักลงทุนที่ซื้อแพงจะขาดทุนได้มาก
+- **NAV ขึ้นอยู่กับ private market valuation:** มูลค่า holdings ไม่ได้ mark-to-market ทุกวัน อาจไม่สะท้อนความเป็นจริงในช่วงตลาดขาลง
+- **Small fund + high volatility:** ปริมาณซื้อขายน้อย spread กว้าง และราคาแกว่งได้รุนแรงกว่าหุ้นทั่วไป
+
+---
+
+## What to Ask Before Owning It
+
+1. **Premium to NAV วันนี้คือเท่าไหร่?** — คุณกำลังจ่ายเงินซื้อสินทรัพย์ที่มีมูลค่าจริงเท่าไหร่ต่อดอลลาร์?
+2. **ถ้า SpaceX หรือ OpenAI ยังไม่ IPO ในอีก 5 ปี portfolio นี้จะ unlock value ได้ยังไง?**
+3. **ค่าใช้จ่ายของกองทุน (expense ratio, management fee) กินผลตอบแทนไปเท่าไหร่ต่อปี?**
+4. **Private valuation ของ holdings เหล่านี้ถูก mark ที่ราคาไหน และใครเป็น auditor/valuation agent?**
+5. **ฉันเข้าใจความเสี่ยง liquidity ของ closed-end fund ไหม — ขายออกได้ทันทีแค่ไหนในสถานการณ์ฉุกเฉิน?**
+
+_Generated: 2026-05-21_
+</script>
+
+<script type="text/plain" id="md-3">
+# INFQ — Infinity Natural Resources, Inc.
+_Brief generated: 2026-05-21_
+
+---
+
+## What the company does
+
+Infinity Natural Resources (INFQ) คือบริษัท upstream oil and gas ที่เน้นการขุดเจาะและผลิตก๊าซธรรมชาติและน้ำมันในแอ่ง Appalachian ทางตะวันออกของสหรัฐฯ บริษัท IPO ในเดือนมกราคม 2025 และถือเป็นหนึ่งใน E&P รายใหม่ที่เล็กกว่าเจ้าใหญ่อย่าง EQT หรือ Range Resources บริษัทมีฐานทรัพย์สินในรัฐ West Virginia และ Ohio เน้นก๊าซ natural gas liquids (NGLs) เป็นหลัก
+
+---
+
+## Latest Earnings
+
+> ⚠️ INFQ IPO ต้นปี 2025 — ข้อมูล earnings มีจำกัด ตัวเลขด้านล่างอิงจากข้อมูลที่มีก่อน August 2025 ซึ่งอาจไม่ใช่ quarter ล่าสุด
+
+- บริษัทยังอยู่ในช่วงต้นหลัง IPO — revenue base ยังเล็กและ cash flow กำลังพัฒนา
+- ราคา natural gas (Henry Hub) ที่ฟื้นตัวจากระดับต่ำในปี 2024 เป็นปัจจัยบวกหลักต่อ realized price
+- ต้นทุน LOE (Lease Operating Expense) ใน Appalachian ต่ำกว่า shale basins อื่นๆ ช่วยรักษา margin
+- บริษัทมี hedging program บางส่วนเพื่อล็อก downside แต่ก็จำกัด upside ด้วย
+- ยังไม่มี dividend — reinvest กลับเข้า drilling program
+
+---
+
+## Bull Case / Bear Case
+
+### Bull Case
+- **Nat gas super-cycle:** ถ้า LNG export demand + data center electricity demand ดันราคา nat gas สูงขึ้น Appalachian producers ได้อานิสงส์เต็มๆ
+- **Small-cap momentum:** หุ้น IPO ใหม่ที่มี float เล็ก พอมี catalyst (earnings beat, nat gas spike) สามารถพุ่งแรงในเวลาสั้น — profile คล้าย RUBI/DXYZ
+- **M&A play:** E&P ขนาดเล็กในแหล่งที่ดีมักเป็นเป้าซื้อกิจการจากรายใหญ่ — news นี้อาจ trigger gap-up ได้
+
+### Bear Case
+- **Nat gas price sensitivity:** ถ้าราคา Henry Hub ดิ่ง margin หดทันที — Appalachian basis differentials แย่กว่าแหล่งอื่น
+- **Liquidity risk:** หุ้น small-cap E&P มี volume บางวัน spread กว้าง — ออกตำแหน่งได้ยากถ้าตลาดปิดไปแล้ว
+- **Post-IPO lock-up expiry:** insider selling หลังครบ 180 วัน (ประมาณ mid-2025) อาจกดราคา
+
+---
+
+## What to Ask Before Owning It
+
+1. **วันไหนมี catalyst?** — earnings date, nat gas storage report (EIA Thursday), หรือ news M&A อยู่ใกล้ไหม? ถ้าไม่มี catalyst ชัดๆ หุ้นนี้ไม่ใช่ pre-market play
+2. **Pre-market volume เป็นยังไง?** — INFQ มี float เล็ก ถ้า volume pre-market บางมาก spread จะกว้าง เข้าออกยาก — ต้องเช็กก่อนเปิดว่ามีคนเล่นพอไหม
+3. **Henry Hub กำลังทำอะไรอยู่?** — ราคา nat gas วันนั้นขึ้นหรือลง? sector rotation เข้า energy ไหม? ถ้าไม่มี sector tailwind โอกาส spike น้อย
+4. **Short interest เท่าไหร่?** — ถ้า short interest สูง + มี catalyst ดี = squeeze potential สูง แต่ถ้า short interest ต่ำ upside จาก squeeze หายไป
+5. **มีข่าว insider buy ล่าสุดไหม?** — ใน E&P ขนาดเล็ก insider buying มักเป็น signal แรงที่สุด ก่อน institutional follow
+
+_ไม่ใช่คำแนะนำซื้อขาย — เป็น research summary เท่านั้น_
+</script>
+
+<script type="text/plain" id="md-4">
+# AAPL — Apple Inc.
+_Research summary only. Not investment advice._
+
+---
+
+## What the company does
+
+Apple Inc. เป็นบริษัทเทคโนโลยีที่ใหญ่ที่สุดในโลก ทำธุรกิจออกแบบและขายสินค้าอิเล็กทรอนิกส์อย่าง iPhone, Mac, iPad และ Apple Watch รวมถึงซอฟต์แวร์และบริการดิจิทัล เช่น App Store, iCloud, Apple Music และ Apple Pay รายได้หลักมาจาก iPhone แต่ธุรกิจ Services กำลังเติบโตเร็วและมีกำไรสูงกว่าฮาร์ดแวร์มาก
+
+---
+
+## Latest Earnings
+
+> ⚠️ ข้อมูลนี้มาจาก training data (knowledge cutoff สิงหาคม 2025) ยังไม่ได้ดึงจาก earnings transcript จริง
+
+- **Revenue (Q2 FY2025, Apr 2025):** ~$95 billion รวม — iPhone ยังคงเป็นสัดส่วนใหญ่สุด
+- **Services segment** ทำรายได้ทะลุ $26 billion+ ต่อไตรมาส มี gross margin สูงกว่า 70%
+- **Greater China** ยังคงเป็นความเสี่ยง — ส่วนแบ่งตลาดถูก Huawei กดดันในช่วงนี้
+- **EPS** เติบโต YoY ได้จากการซื้อหุ้นคืน (buyback) อย่างต่อเนื่อง มากกว่าการเติบโตของรายได้
+- **Apple Intelligence (AI features)** เปิดตัวใน iOS 18 — ตลาดจับตาว่าจะดันการอัปเกรด iPhone cycle หรือเปล่า
+
+---
+
+## Bull Case / Bear Case
+
+### Bull Case
+- **Services flywheel:** ฐานผู้ใช้ 2+ billion devices สร้าง recurring revenue ที่ sticky มาก — gross margin ของ Services สูงกว่า Products มากกว่าสองเท่า
+- **AI upgrade cycle:** Apple Intelligence อาจจุดประกาย super-cycle ของ iPhone ใหม่ เพราะต้องใช้ iPhone 15 Pro ขึ้นไปถึงจะรันได้
+- **Ecosystem lock-in:** ผู้ใช้ย้ายออกจาก Apple ecosystem ยากมาก ทำให้มีอำนาจตั้งราคาสูง
+
+### Bear Case
+- **iPhone saturation:** ตลาดสมาร์ทโฟนโลกอิ่มตัว การเติบโตของ iPhone พึ่งการอัปเกรดมากกว่า new users
+- **China risk:** กฎระเบียบของจีน + การแข่งขันจาก Huawei คุกคามตลาดที่ใหญ่ที่สุดเป็นอันดับสอง
+- **Regulatory pressure:** คดี antitrust ทั้งในสหรัฐฯ และ EU ล้อมรอบ App Store ซึ่งเป็นแหล่งรายได้ Services ที่ใหญ่ที่สุด
+
+---
+
+## What to Ask Before Owning It
+
+1. **iPhone คิดเป็นกี่ % ของรายได้ทั้งหมด และถ้า cycle ชะลอจะกระทบกำไรมากแค่ไหน?**
+2. **Services segment โตได้จากอะไรบ้าง — มีความเสี่ยงจาก regulation ที่ App Store อย่างไร?**
+3. **Valuation สูงกว่า peer เพราะอะไร และ premium นั้น justify ได้ไหมในอัตราเติบโตปัจจุบัน?**
+4. **Apple ลงทุน AI เองมากแค่ไหน เทียบกับ Microsoft หรือ Google — มีความเสี่ยงที่จะ lag ไหม?**
+5. **Buyback program ช่วยให้ EPS โต แต่ถ้าหยุด buyback รายได้จริงโตพอไหม?**
+
+_Generated: 2026-05-21_
+</script>
+
+<script type="text/plain" id="md-5">
+# AAPL — Apple Inc.
+_Brief generated: 2026-05-21_
+
+---
+
+## What the company does
+
+Apple คือบริษัทเทคโนโลยีที่ใหญ่ที่สุดในโลกตามมูลค่าตลาด ทำรายได้หลักจาก iPhone, Mac, iPad, Apple Watch และ AirPods ควบคู่กับธุรกิจ Services ที่กำลังโต ได้แก่ App Store, iCloud, Apple Music, Apple TV+ และ Apple Pay บริษัทเป็นที่รู้จักในด้าน ecosystem ที่ปิดแน่น ทำให้ผู้ใช้ติดอยู่ใน Apple loop ได้ยากจะออก
+
+---
+
+## Latest Earnings
+
+> ⚠️ อิงจาก Q1 FY2025 (ธันวาคม 2024) ซึ่งเป็น quarter ล่าสุดที่รู้จาก training data — ตัวเลขจริงอาจเปลี่ยนแล้ว
+
+- **Revenue:** ~$124B รวม quarter — record high ในขณะนั้น ขับเคลื่อนโดย iPhone 16 cycle และ Services
+- **Services:** รายได้ ~$26.3B (+14% YoY) — margin สูงกว่า hardware มาก นี่คือเครื่องยนต์กำไรตัวจริง
+- **iPhone:** ~$69.1B — ยังแข็งแกร่ง แม้ตลาดจีนกดดัน โตดีในตลาด emerging markets
+- **China:** รายได้จีนอ่อนตัว — Huawei กลับมาแข่ง + regulatory pressure เป็น overhang ต่อเนื่อง
+- **EPS:** $2.40 — beat consensus; buyback program แข็งแกร่ง ยังคืนเงินผู้ถือหุ้นต่อเนื่อง
+
+---
+
+## Bull Case / Bear Case
+
+### Bull Case
+- **AI super-cycle incoming:** Apple Intelligence (on-device AI) อาจ trigger upgrade cycle ที่ใหญ่ที่สุดในรอบหลายปี — ถ้า Wall Street เชื่อ narrative นี้ pre-market gap-up ก่อน earnings คือโอกาส
+- **Services flywheel:** margin สูง predictable revenue จาก 2+ billion active devices — ทำให้ valuation premium ยังมีเหตุผล
+- **Buyback machine:** Apple ซื้อหุ้นคืนมากกว่าใครในตลาด — EPS เติบโตแม้ revenue flat
+
+### Bear Case
+- **China risk:** ถ้า US-China tension รุนแรงขึ้น หรือ China ban iPhone เหมือน govt employee ban — revenue 15-20% หายได้
+- **Valuation หนัก:** P/E ~30x สำหรับบริษัทที่ revenue growth อยู่แค่ single-digit — bad news กดลงได้แรง
+- **Earnings miss = gap-down ทันที:** AAPL มี options market ขนาดยักษ์ implied move หลัง earnings อาจ ±5-8% ในคืนเดียว — double-edged sword
+
+---
+
+## What to Ask Before Owning It
+
+1. **Earnings วันไหน?** — AAPL รายงาน quarterly earnings ทุก ~3 เดือน วันก่อน earnings คือ window ที่ pre-market อาจ volatile มาก ต้องรู้ date ชัดก่อนเข้า
+2. **Options implied move บอกอะไร?** — เช็ก at-the-money straddle ราคาคืน earnings บอก market คาดหวัง move เท่าไหร่ ถ้า IV สูงมาก premium แพง ต้นทุน hedge สูง
+3. **China news มีอะไรล่าสุดไหม?** — ข่าวจีนกับ Apple คือ trigger ที่ดีที่สุดสำหรับ pre-market spike ขึ้นหรือลง ต้องติดตาม headlines ทุกวัน
+4. **ตอนนี้ AAPL อยู่ที่จุดไหนใน iPhone cycle?** — ปีที่ออก iPhone ใหม่กับปีที่ไม่มีอะไรใหม่ราคาหุ้น react ต่างกัน
+5. **Market cap ใหญ่ = move ช้ากว่า small-cap:** AAPL ไม่ใช่ RUBI ไม่ spike 50% ใน pre-market — เหมาะกับ catalyst-driven trade แบบ controlled มากกว่า full squeeze play
+
+_ไม่ใช่คำแนะนำซื้อขาย — เป็น research summary เท่านั้น_
+</script>
+
+<script type="text/plain" id="md-6">
+# AAPL — Apple Inc.
+_Brief generated: 2026-05-21_
+
+---
+
+## 1. Company snapshot
+
+Apple Inc. บริษัทเทคโนโลยีผู้ผลิต iPhone, Mac, iPad, และ accessories ขายทั้ง hardware และ Services (App Store, iCloud, Apple TV+, Apple Pay) ให้ผู้บริโภคและองค์กรทั่วโลก รายได้หลักยังมาจาก iPhone ราว 50% ของ revenue ทั้งหมด แต่ Services segment กำลังโตเร็วกว่าและมี margin สูงกว่ามาก ความแข็งแกร่งหลักของบริษัทอยู่ที่ Switching Costs — ผู้ใช้ที่อยู่ใน iCloud, iMessage, App Store แทบไม่มีแรงจูงใจไปอยู่ที่อื่น ทำให้ revenue base sticky มาก
+
+---
+
+## 2. Fundamentals signal
+
+- **Revenue trend:** เติบโต single-digit YoY — ไม่ใช่ growth story แบบ hypergrowth แต่เป็น quality + consistency story
+- **Margin trend:** Services gross margin (~73%) ดึง blended margin สูงขึ้นต่อเนื่อง แม้ iPhone margin ไม่ได้ขยายมากนัก — direction ชัด
+- **Balance sheet:** net cash หนุนแกร่ง ไม่มี refinancing risk — ไม่มีแรงกดจาก debt
+- **Capital allocation:** buyback ปีละ ~$90B+ เป็น EPS driver หลัก ทำให้ per-share earnings โตแม้ net income flat (ตัวเลขแน่นอนเช็คใน 10-K ล่าสุด)
+- **Dividend:** จ่ายต่อเนื่องแต่ yield ต่ำมาก (~0.5%) — ไม่ใช่ dividend story
+
+---
+
+## 3. Latest earnings
+
+> ผมไม่แน่ใจว่า quarter ล่าสุดที่ออกแล้วตอนนี้คืออะไร อิงจากที่รู้คือ Q1 FY2025 (สิ้นสุด ธันวาคม 2024)
+
+- Revenue รวมระดับ ~$124B — holiday quarter เป็น strongest quarter ของปีเสมอ ตัวเลขยืนยันใน filing
+- iPhone segment ยังแข็งแกร่ง แต่ market share ในจีนเป็น question mark ที่นักลงทุนถามทุก call
+- Services segment outgrow hardware ต่อเนื่อง — CEO framed ว่าเป็น long-term margin engine ของบริษัท
+- Greater China revenue อ่อนตัว — Huawei กลับมา + domestic brand แข็งขึ้น กดดัน share
+- EPS beat consensus; buyback pace ยังแข็งกระแทก
+
+---
+
+## 4. Bull case / Bear case
+
+### Bull case
+- **iPhone upgrade cycle + AI narrative:** Apple Intelligence (on-device AI) คือ story ที่ Wall Street ใช้ push ราคาก่อน iPhone cycle ใหม่ — ถ้า catalyst ชัด pre-earnings momentum คือ window
+- **Switching Costs ลึกมาก:** ผู้ใช้ใน iCloud + iMessage + App Store ไม่ค่อยออก revenue recurring และ predictable แม้ macro แย่
+- **Buyback machine:** buyback ขนาดนี้ support EPS growth เกือบทุก scenario แม้ top-line ซบ
+
+### Bear case
+- **China concentration risk:** ~17% ของ revenue มาจาก Greater China — escalation ใดๆ ใน US-China หรือ ban ระดับรัฐบาลกระทบตรงและเร็ว
+- **Valuation แพงสำหรับ growth ช้า:** P/E สูง สำหรับ single-digit growth — bad news ใดๆ re-rate ลงได้เร็ว โดยเฉพาะในตลาดที่ risk-off
+- **Antitrust threat ต่อ App Store:** DOJ/EU บังคับ open ecosystem จริง = Switching Costs หาย + Services margin หด นี่คือ structural bear case ที่สุด
+
+---
+
+## 5. Kill conditions
+
+- **China revenue ลด >20% YoY สองไตรมาสติด** โดยไม่มี recovery thesis ชัด — China leg ของ story หักแล้ว ต้องประเมิน position ใหม่
+- **Services growth rate ต่ำกว่า hardware growth เป็นครั้งแรก** — signal ว่า margin expansion story กลับทิศ เหตุผลหลักในการถือหายไป
+- **ศาล/หน่วยงานกำกับบังคับ sideloading และมีผลจริง** — Switching Costs ลดทันที App Store monopoly หาย ถ้า ruling ออก ต้องตัดสินใจก่อน market re-price เสร็จ
+
+---
+
+## 6. What to ask before owning it
+
+1. **Earnings วันไหน และ implied move จาก options เท่าไหร่?** — AAPL มี options volume มหาศาล IV ก่อน earnings บอก market คาดหวัง move กี่ % นั่นคือ risk window ของ pre-market play
+2. **China news 48 ชั่วโมงก่อนเปิดตลาดมีอะไรไหม?** — ข่าวจีนคือ trigger ที่เร็วและรุนแรงที่สุดสำหรับ AAPL pre-market ถ้า headline ดี gap-up, ถ้า headline เสีย gap-down
+3. **AAPL spike ได้แค่ไหนใน 1 คืน?** — ต่างจาก RUBI/DXYZ ที่ขึ้น 50-100% pre-market, AAPL ±5-8% คือ big move แล้ว ถ้าต้องการ upside แบบ squeeze play ตัวนี้ไม่ใช่ playground นั้น
+4. **Float ใหญ่ = ไม่มี squeeze mechanics:** AAPL มีหุ้น outstanding ~15B shares short interest ไม่ทำให้เกิด squeeze แบบ small-cap — ต้องพึ่ง fundamental catalyst ล้วนๆ
+5. **Technical support ชัดอยู่ที่ไหน?** — ถ้าจะเล่น pre-market dip-buy ต้องรู้ level ที่หุ้นเด้งก่อน ไม่ใช่ catch knife blind — เช็ก daily chart ก่อนเสมอ
+
+_ไม่ใช่คำแนะนำซื้อขาย — เป็น research summary เท่านั้น_
+</script>
+
+<!-- ============================================================
+     Application script
+     ============================================================ -->
+<script>
+  const BRIEFS = [
+    {
+      id: 0,
+      ticker: 'AAPL',
+      version: '',
+      badgeClass: '',
+      company: 'Apple Inc.',
+      date: '2026-05-21',
+      preview: 'Apple ออกแบบและขายสินค้าอิเล็กทรอนิกส์ (iPhone, Mac, iPad, Apple Watch, AirPods) และบริการดิจิทัล (App Store, iCloud) รายได้หลักยังมาจาก iPhone แต่ฝั่ง Services กำลังโตเร็วที่สุดและมี margin สูงกว่ามาก'
+    },
+    {
+      id: 1,
+      ticker: 'NVDA',
+      version: '',
+      badgeClass: 'badge-ai',
+      company: 'NVIDIA Corporation',
+      date: '2026-05-21',
+      preview: 'NVIDIA ออกแบบชิป GPU ที่กลายเป็นโครงสร้างพื้นฐานหลักของอุตสาหกรรม AI ทั่วโลก รายได้ส่วนใหญ่มาจาก Data Center ที่ขาย GPU ซีรีส์ H100/H200/Blackwell ให้ hyperscalers'
+    },
+    {
+      id: 2,
+      ticker: 'DXYZ',
+      version: '',
+      badgeClass: 'badge-fund',
+      company: 'Destiny Tech100 Inc.',
+      date: '2026-05-21',
+      preview: 'Destiny Tech100 เป็น closed-end fund (NYSE) ที่เปิดให้นักลงทุนทั่วไปเข้าถึง private tech unicorns อย่าง SpaceX, OpenAI, Stripe และ Discord ที่ยังไม่ IPO'
+    },
+    {
+      id: 3,
+      ticker: 'INFQ',
+      version: '',
+      badgeClass: 'badge-energy',
+      company: 'Infinity Natural Resources',
+      date: '2026-05-21',
+      preview: 'Infinity Natural Resources คือบริษัท upstream oil & gas ที่เน้นขุดเจาะก๊าซธรรมชาติในแอ่ง Appalachian IPO มกราคม 2025 เป็น small-cap E&P ที่มี float เล็กและ float-driven volatility สูง'
+    },
+    {
+      id: 4,
+      ticker: 'AAPL',
+      version: 'v1',
+      badgeClass: '',
+      company: 'Apple Inc.',
+      date: '2026-05-21',
+      preview: 'Apple Inc. เป็นบริษัทเทคโนโลยีที่ใหญ่ที่สุดในโลก ออกแบบและขาย iPhone, Mac, iPad และ Apple Watch รายได้หลักมาจาก iPhone แต่ Services กำลังเติบโตเร็วและมีกำไรสูงกว่าฮาร์ดแวร์มาก'
+    },
+    {
+      id: 5,
+      ticker: 'AAPL',
+      version: 'v2',
+      badgeClass: '',
+      company: 'Apple Inc.',
+      date: '2026-05-21',
+      preview: 'Apple คือบริษัทเทคโนโลยีที่ใหญ่ที่สุดในโลกตามมูลค่าตลาด ทำรายได้หลักจาก iPhone, Mac, iPad, AirPods ควบคู่กับ Services ecosystem ที่ปิดแน่น ทำให้ผู้ใช้ยากจะออกจาก loop'
+    },
+    {
+      id: 6,
+      ticker: 'AAPL',
+      version: 'v3',
+      badgeClass: '',
+      company: 'Apple Inc.',
+      date: '2026-05-21',
+      preview: 'Apple Inc. ผู้ผลิต iPhone, Mac, iPad และ accessories ที่ขาย hardware + Services ให้ผู้บริโภคทั่วโลก ความแข็งแกร่งหลักคือ Switching Costs จาก iCloud, iMessage, App Store'
+    }
+  ];
+
+  /* ---- Minimal markdown → HTML converter ---- */
+  function mdToHtml(md) {
+    const lines = md.split('\n');
+    let html = '';
+    let inList = false;
+    let inBlockquote = false;
+
+    function esc(s) {
+      return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function inline(text) {
+      let s = esc(text);
+      s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
+      s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+      s = s.replace(/__([^_]+)__/g, '<strong>$1</strong>');
+      // italic: only match _text_ when not inside a word boundary issue
+      s = s.replace(/(?<!\w)_([^_]+)_(?!\w)/g, '<em>$1</em>');
+      s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+      return s;
+    }
+
+    for (const line of lines) {
+      const t = line.trim();
+      const isList = /^[-*]\s/.test(t);
+      const isBq   = /^>/.test(t);
+      const isHr   = /^-{3,}$/.test(t);
+      const isH3   = /^### /.test(t);
+      const isH2   = /^## /.test(t);
+      const isH1   = /^# /.test(t);
+      const isEmpty = t === '';
+
+      if (!isList && inList)      { html += '</ul>';         inList = false; }
+      if (!isBq  && inBlockquote) { html += '</blockquote>'; inBlockquote = false; }
+
+      if (isH3) {
+        html += '<h3>' + inline(t.replace(/^### /, '')) + '</h3>';
+      } else if (isH2) {
+        html += '<h2>' + inline(t.replace(/^## /, '')) + '</h2>';
+      } else if (isH1) {
+        html += '<h1>' + inline(t.replace(/^# /, '')) + '</h1>';
+      } else if (isHr) {
+        html += '<hr>';
+      } else if (isBq) {
+        if (!inBlockquote) { html += '<blockquote>'; inBlockquote = true; }
+        const content = t.replace(/^>\s?/, '');
+        if (content) html += '<p>' + inline(content) + '</p>';
+      } else if (isList) {
+        if (!inList) { html += '<ul>'; inList = true; }
+        html += '<li>' + inline(t.replace(/^[-*]\s+/, '')) + '</li>';
+      } else if (isEmpty) {
+        /* paragraph break — nothing needed */
+      } else {
+        html += '<p>' + inline(line) + '</p>';
+      }
+    }
+
+    if (inList)      html += '</ul>';
+    if (inBlockquote) html += '</blockquote>';
+    return html;
+  }
+
+  /* ---- Render card grid ---- */
+  const grid = document.getElementById('grid');
+
+  BRIEFS.forEach(function(b) {
+    const card = document.createElement('div');
+    card.className = 'card';
+
+    const verBadge = b.version
+      ? '<span class="badge badge-ver">' + b.version + '</span>'
+      : '';
+
+    card.innerHTML =
+      '<div class="card-header">' +
+        '<span class="badge ' + b.badgeClass + '">' + b.ticker + '</span>' +
+        verBadge +
+      '</div>' +
+      '<div class="card-company">' + b.company + '</div>' +
+      '<div class="card-date">' + b.date + '</div>' +
+      '<div class="card-preview">' + b.preview + '</div>';
+
+    card.addEventListener('click', function() { openModal(b.id); });
+    grid.appendChild(card);
+  });
+
+  /* ---- Modal logic ---- */
+  const overlay      = document.getElementById('overlay');
+  const briefContent = document.getElementById('briefContent');
+  const closeBtn     = document.getElementById('closeBtn');
+
+  function openModal(id) {
+    const raw = document.getElementById('md-' + id).textContent;
+    briefContent.innerHTML = mdToHtml(raw);
+    overlay.classList.add('active');
+    document.body.style.overflow = 'hidden';
+    overlay.scrollTop = 0;
+  }
+
+  function closeModal() {
+    overlay.classList.remove('active');
+    document.body.style.overflow = '';
+  }
+
+  closeBtn.addEventListener('click', closeModal);
+  overlay.addEventListener('click', function(e) {
+    if (e.target === overlay) closeModal();
+  });
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeModal();
+  });
+</script>
+</body>
+</html>
